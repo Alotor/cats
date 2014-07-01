@@ -5,6 +5,9 @@
   #+cljs
   (:require-macros [cats.core :as cm]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Context Management
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^:dynamic *m-context*)
 
@@ -13,6 +16,10 @@
   [ctx & body]
   `(binding [*m-context* ~ctx]
      ~@body))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Context-aware funcionts
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn pure
   "Given any value v, return it wrapped in
@@ -52,6 +59,11 @@
     (return nil)
     (mzero)))
 
+(defn join
+  "Remove one level of monadic structure."
+  [mv]
+  (bind mv identity))
+
 (defn fmap
   "Apply a function f to the value inside functor's fv
   preserving the context type."
@@ -65,27 +77,9 @@
   [af av]
   (p/fapply af av))
 
-(defn >>=
-  "Performs a Haskell-style left-associative bind."
-  ([mv f]
-     (bind mv f))
-  ([mv f & fs]
-     (reduce bind mv (cons f fs))))
-
-(defn <$>
-  "Alias of fmap."
-  ([f]
-     (fn [fv]
-       (p/fmap fv f)))
-  ([f fv]
-     (p/fmap fv f)))
-
-(defn <*>
-  "Performs a Haskell-style left-associative fapply."
-  ([af av]
-     (p/fapply af av))
-  ([af av & avs]
-     (reduce p/fapply af (cons av avs))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Monadic Let Macro
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 #+clj
 (defmacro mlet
@@ -106,14 +100,37 @@
                  ~next-mlet))))
     `(do ~@body)))
 
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Monadic functions
+;; Haskell-style aliases and util functions.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn join
-  "Remove one level of monadic structure."
-  [mv]
-  (bind mv identity))
+(defn <$>
+  "Alias of fmap."
+  ([f]
+     (fn [fv]
+       (p/fmap fv f)))
+  ([f fv]
+     (p/fmap fv f)))
+
+(defn <*>
+  "Performs a Haskell-style left-associative fapply."
+  ([af av]
+     (p/fapply af av))
+  ([af av & avs]
+     (reduce p/fapply af (cons av avs))))
+
+(defn >>=
+  "Performs a Haskell-style left-associative bind.
+
+  Example:
+    (>>= (just 1) (comp just inc) (comp just inc))
+    ;=> #<Just [3]>
+  "
+  ([mv f]
+     (bind mv f))
+  ([mv f & fs]
+     (reduce bind mv (cons f fs))))
 
 (defn =<<
   "Same as the two argument version of `>>=` but with the
