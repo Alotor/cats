@@ -4,6 +4,40 @@
             [cats.protocols :as proto]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Identity
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(deftype Identity [v]
+  #+clj
+  Object
+  #+clj
+  (equals [_ other]
+    (= v (.-v other)))
+
+  #+cljs
+  cljs.core/IEquiv
+  #+cljs
+  (-equiv [_ other]
+    (= v (.-v other)))
+
+  (toString [_]
+    (with-out-str (print v)))
+
+  proto/Functor
+  (fmap [_ f]
+    (Identity. (f v)))
+
+  proto/Applicative
+  (pure [_ v']
+    (Identity. v'))
+
+  (fapply [_ av]
+    (v (.-v av)))
+
+  proto/Monad
+  (bind [_ f] (f v)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Either
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -213,7 +247,7 @@
   (bind [self f]
     (apply concat (map f self))))
 
-; TODO: test & document
+; TODO: document
 (extend-type #+clj clojure.lang.PersistentVector
              #+cljs cljs.core.PersistentVector
   proto/Functor
